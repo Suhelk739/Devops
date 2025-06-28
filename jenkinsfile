@@ -12,11 +12,9 @@ pipeline{
     stages{
         stage('checkout'){
             steps{
-                script{
-                    dir("terraform"){
-                        git branch : 'terraform' , url: 'https://github.com/Suhelk739/Devops.git'
-                    }
-                }
+
+                git branch : 'terraform' , url: 'https://github.com/Suhelk739/Devops.git'
+
             }
 
         }
