@@ -18,7 +18,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'terraform', url: 'https://github.com/Suhelk739/Devops.git'
+        git branch: 'Terraform', url: 'https://github.com/Suhelk739/Devops.git'
       }
     }
 
