@@ -1,53 +1,76 @@
-pipeline{
-    parameters{
-        choice(name:'terraformactions', choices :['apply','destroy'], description:'Choose your terraform action')
+pipeline {
+  agent any
+
+  // still fine to declare static build‐time parameters up here
+  parameters {
+    choice(
+      name: 'terraformactions',
+      choices: ['apply', 'destroy'],
+      description: 'Choose your terraform action'
+    )
+  }
+
+  environment {
+    Secret_key = credentials('Secret_keycredentials')
+    access_key = credentials('access_key')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'terraform', url: 'https://github.com/Suhelk739/Devops.git'
+      }
     }
 
-    environment{
-        Sceret_key=credentials('Sceret_keycredentials')
-        access_key=credentials('access_key')
+    stage('Plan') {
+      steps {
+        sh 'terraform init'
+        sh 'terraform plan -out=tfplan'
+        sh 'terraform show -no-color > tfplan.txt'
+      }
     }
-    agent any
 
-    stages{
-        stage('checkout'){
-            steps{
+    stage('Approval') {
+      steps {
+        // wrap any imperative logic in a script block
+        script {
+          // readFile (capital “F”) returns the contents of tfplan.txt
+          def plan = readFile('tfplan.txt')
 
-                git branch : 'terraform' , url: 'https://github.com/Suhelk739/Devops.git'
-
-            }
-
+          // this will pause the pipeline and show the plan as a text parameter
+          input(
+            id: 'ApprovePlan', 
+            message: 'Do you want to approve this plan?',
+            parameters: [
+              text(
+                name: 'PLAN', 
+                description: 'Review and confirm (you can modify if needed)', 
+                defaultValue: plan
+              )
+            ]
+          )
+          // if you need to capture the edited PLAN, assign input() to a variable:
+          // def userApprovedPlan = input( … )
         }
-
-        stage('Plan'){
-            steps{
-                sh "pwd && terraform init"
-                sh "pwd && terraform plan -out tfplan"
-                sh "pwd && terraform show -no-color >> tfplan.txt"
-            }
-
-        }
-        stage('approve'){
-            def plan = readfile 'tfplan.txt'
-            input message: "Do you want to approve this"
-            parameters(text(name:'plan', description:'please approve', defaultValue:plan) )
-
-        }
-
-        stage('approve or destroy'){
-            when{
-                expression{
-                    return params.terraformactions == 'apply' || params.terraformactions == 'destroy'                }
-            }
-            steps{
-                if(params.terraformactions == 'apply'){
-                    sh "pwd && cd Project-1 && terraform plan -input=false tfplan"
-                }
-                else if (params.terraformactions == 'destroy'){
-                    sh "pwd && cd Project-1 && terraform destroy -auto-approve"
-                }
-            }
-
-        }
+      }
     }
+
+    stage('Apply or Destroy') {
+      // only run this block if the choice param is apply or destroy
+      when {
+        expression {
+          params.terraformactions in ['apply', 'destroy']
+        }
+      }
+      steps {
+        script {
+          if (params.terraformactions == 'apply') {
+            sh 'terraform apply -input=false tfplan'
+          } else {
+            sh 'terraform destroy -auto-approve'
+          }
+        }
+      }
+    }
+  }
 }
