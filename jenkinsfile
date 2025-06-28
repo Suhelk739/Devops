@@ -1,0 +1,55 @@
+pipeline{
+    parameters{
+        choice(name:'terraformactions', choices :['apply','destroy'], description:'Choose your terraform action')
+    }
+
+    environment{
+        Sceret_key=credentials('Sceret_key=credentials')
+        access_key=credentials('access_key')
+    }
+    agent any
+
+    stages{
+        stage('checkout'){
+            steps{
+                script{
+                    dir("terraform"){
+                        git branch : 'terraform' , url: 'https://github.com/Suhelk739/Punith-Rajkumar.git'
+                    }
+                }
+            }
+
+        }
+
+        stage('Plan'){
+            steps{
+                sh "pwd && cd Project-1 && terraform init"
+                sh "pwd && cd Project-1 && terraform plan -out tfplan"
+                sh "pwd && cd Project-1 && terraform show -no-color >> tfplan.txt"
+            }
+
+        }
+        stage('approve'){
+            def plan = readfile 'project-1/tfplan.txt'
+            input message: "Do you want to approve this"
+            parameters(text(name:'plan', description:'please approve', defaultValue:plan) )
+
+        }
+
+        stage('approve or destroy'){
+            when{
+                expression{
+                    return params.terraformactions == 'apply' || params.terraformactions == 'destroy'                }
+            }
+            steps{
+                if(params.terraformactions == 'apply'){
+                    sh "pwd && cd Project-1 && terraform plan -input=false tfplan"
+                }
+                else if (params.terraformactions == 'destroy'){
+                    sh "pwd && cd Project-1 && terraform destroy -auto-approve"
+                }
+            }
+
+        }
+    }
+}
