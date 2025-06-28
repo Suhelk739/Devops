@@ -14,7 +14,7 @@ pipeline{
             steps{
                 script{
                     dir("terraform"){
-                        git branch : 'terraform' , url: 'https://github.com/Suhelk739/Punith-Rajkumar.git'
+                        git branch : 'terraform' , url: 'https://github.com/Suhelk739/Devops.git'
                     }
                 }
             }
